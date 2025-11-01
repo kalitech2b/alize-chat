@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chatbot Hôtel Les Alizés</title>
+  <style>
+    body { margin:0; font-family:sans-serif; }
+    #chatButton {
+      position:fixed; bottom:24px; right:24px;
+      width:60px; height:60px; border-radius:50%;
+      background:#0066cc; color:#fff;
+      display:flex; align-items:center; justify-content:center;
+      font-size:28px; cursor:pointer;
+      box-shadow:0 4px 12px rgba(0,0,0,0.25);
+      z-index:9999;
+    }
+    #chatWindow {
+      display:none; flex-direction:column;
+      position:fixed; bottom:100px; right:24px;
+      width:360px; height:520px; background:white;
+      border-radius:12px; box-shadow:0 6px 24px rgba(0,0,0,0.2);
+      overflow:hidden; font-family:sans-serif;
+      z-index:9999;
+    }
+    #chatHeader {
+      background:#0066cc; color:white; padding:12px;
+      font-weight:600; display:flex; justify-content:space-between; align-items:center;
+    }
+    #messages { flex:1; padding:12px; overflow-y:auto; }
+    #chatInput { display:flex; border-top:1px solid #ddd; }
+    #userInput {
+      flex:1; padding:10px; border:none; outline:none;
+    }
+    #sendBtn {
+      background:#0066cc; color:white; border:none;
+      padding:10px 14px; cursor:pointer;
+    }
+  </style>
+</head>
+<body>
+  <div id="chatButton">💬</div>
+
+  <div id="chatWindow">
+    <div id="chatHeader">
+      Hôtel Les Alizés
+      <span id="closeChat" style="cursor:pointer;">✕</span>
+    </div>
+    <div id="messages">
+      <p>👋 Bonjour ! Je suis l’assistant virtuel de l’Hôtel Les Alizés.</p>
+    </div>
+    <div id="chatInput">
+      <input id="userInput" type="text" placeholder="Écrivez votre message...">
+      <button id="sendBtn">➤</button>
+    </div>
+  </div>
+
+  <script>
+    // ⬇️ Choisis ici ton URL N8N (test ou prod)
+    // --- Mode test (pendant que tu cliques sur "Execute Workflow" dans n8n)
+    // const N8N_WEBHOOK_URL = "https://kallitech.app.n8n.cloud/webhook-test/ab332775-6459-4328-ba4e-e8be6fed305c";
+
+    // --- Mode production (workflow activé)
+    const N8N_WEBHOOK_URL = "https://kallitech.app.n8n.cloud/webhook/ab332775-6459-4328-ba4e-e8be6fed305c";
+
+    const btn = document.getElementById('chatButton');
+    const win = document.getElementById('chatWindow');
+    const close = document.getElementById('closeChat');
+    const send = document.getElementById('sendBtn');
+    const input = document.getElementById('userInput');
+    const messages = document.getElementById('messages');
+
+    btn.onclick = () => win.style.display = 'flex';
+    close.onclick = () => win.style.display = 'none';
+
+    async function sendMessage() {
+      const text = input.value.trim();
+      if (!text) return;
+
+      // Afficher le message utilisateur
+      const msgUser = document.createElement('p');
+      msgUser.textContent = '🧍 ' + text;
+      messages.appendChild(msgUser);
+      input.value = '';
+      messages.scrollTop = messages.scrollHeight;
+
+      // Message "chargement"
+      const msgBot = document.createElement('p');
+      msgBot.textContent = '🤖 ...';
+      messages.appendChild(msgBot);
+
+      try {
+        const response = await fetch(N8N_WEBHOOK_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: text })
+        });
+
+        let botReply;
+        try {
+          const data = await response.json();
+          botReply = data.message || data.reply || JSON.stringify(data);
+        } catch {
+          botReply = await response.text();
+        }
+
+        msgBot.textContent = "🤖 " + (botReply || "Je n’ai pas compris, désolé.");
+      } catch (error) {
+        console.error(error);
+        msgBot.textContent = "⚠️ Erreur de connexion au serveur.";
+      }
+
+      messages.scrollTop = messages.scrollHeight;
+    }
+
+    send.onclick = sendMessage;
+    input.addEventListener('keypress', e => { if (e.key === 'Enter') sendMessage(); });
+  </script>
+</body>
+</html>
